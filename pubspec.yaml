@@ -1,0 +1,6 @@
+name: task_manager
+description: Componente reutilizable para manejar tareas (TaskManager).
+version: 1.0.0
+publish_to: none # evita intentar publicarlo en pub.dev (útil para paquetes locales)
+environment:
+  sdk: '>=2.18.0 <4.0.0'
