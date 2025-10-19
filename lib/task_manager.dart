@@ -1,7 +1,8 @@
-// lib/task_manager.dart
 library task_manager;
 
-/// Clase que representa una tarea individual.
+import 'dart:async';
+
+/// Modelo de tarea
 class Task {
   int id;
   String title;
@@ -15,67 +16,70 @@ class Task {
     this.completed = false,
   });
 
-  void toggleCompleted() => completed = !completed;
+  void toggle() => completed = !completed;
 
-  @override
-  String toString() =>
-      '[$id] $title - ${completed ? "✅ Completada" : "❌ Pendiente"}';
+  Task copyWith({
+    String? title,
+    String? description,
+    bool? completed,
+  }) {
+    return Task(
+      id: id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      completed: completed ?? this.completed,
+    );
+  }
 }
 
-/// Componente reutilizable para la gestión de tareas.
+/// Gestor reutilizable de tareas
 class TaskManager {
   final List<Task> _tasks = [];
+  final StreamController<List<Task>> _taskStreamController =
+      StreamController.broadcast();
+
   int _nextId = 1;
 
-  /// Agrega una nueva tarea al sistema.
-  Task addTask(String title, String description) {
-    final task = Task(id: _nextId++, title: title, description: description);
-    _tasks.add(task);
-    return task;
+  Stream<List<Task>> get taskStream => _taskStreamController.stream;
+
+  List<Task> get tasks => List.unmodifiable(_tasks);
+
+  void _notify() => _taskStreamController.add(List.unmodifiable(_tasks));
+
+  void addTask(String title, String description) {
+    _tasks.add(Task(id: _nextId++, title: title, description: description));
+    _notify();
   }
 
-  /// Elimina una tarea por su ID.
-  bool deleteTask(int id) {
-    final initialLength = _tasks.length;
-    _tasks.removeWhere((task) => task.id == id);
-    return _tasks.length < initialLength; // Devuelve true si se eliminó algo
+  void updateTask(int id, {String? title, String? description}) {
+    final index = _tasks.indexWhere((t) => t.id == id);
+    if (index != -1) {
+      _tasks[index] =
+          _tasks[index].copyWith(title: title, description: description);
+      _notify();
+    }
   }
 
-  /// Cambia el estado de una tarea (completada / pendiente).
-  bool toggleTaskStatus(int id) {
-    final task = _tasks.firstWhere(
-      (t) => t.id == id,
-      orElse: () => throw Exception('Tarea no encontrada'),
-    );
-    task.toggleCompleted();
-    return task.completed;
+  void toggleTaskStatus(int id) {
+    final index = _tasks.indexWhere((t) => t.id == id);
+    if (index != -1) {
+      _tasks[index].toggle();
+      _notify();
+    }
   }
 
-  /// Actualiza el título o descripción de una tarea.
-  bool updateTask(int id, {String? title, String? description}) {
-    final task = _tasks.firstWhere(
-      (t) => t.id == id,
-      orElse: () => throw Exception('Tarea no encontrada'),
-    );
-    if (title != null) task.title = title;
-    if (description != null) task.description = description;
-    return true;
+  void deleteTask(int id) {
+    _tasks.removeWhere((t) => t.id == id);
+    _notify();
   }
 
-  /// Devuelve todas las tareas (solo lectura).
-  List<Task> getAllTasks() => List.unmodifiable(_tasks);
-
-  /// Devuelve solo las tareas completadas.
-  List<Task> getCompletedTasks() =>
-      _tasks.where((t) => t.completed).toList(growable: false);
-
-  /// Devuelve solo las tareas pendientes.
-  List<Task> getPendingTasks() =>
-      _tasks.where((t) => !t.completed).toList(growable: false);
-
-  /// Limpia todas las tareas (reinicia el sistema).
   void clearAll() {
     _tasks.clear();
     _nextId = 1;
+    _notify();
+  }
+
+  void dispose() {
+    _taskStreamController.close();
   }
 }
