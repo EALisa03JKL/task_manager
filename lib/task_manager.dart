@@ -65,4 +65,49 @@ class TaskManager {
     _tasks.add(Task(
       id: _nextId++,
       title: title,
-      descript
+      description: description,
+      deadline: deadline,
+    ));
+    _notify();
+  }
+
+  void updateTask(
+    int id, {
+    String? title,
+    String? description,
+    DateTime? deadline,
+  }) {
+    final index = _tasks.indexWhere((t) => t.id == id);
+    if (index != -1) {
+      _tasks[index] = _tasks[index].copyWith(
+        title: title,
+        description: description,
+        deadline: deadline,
+      );
+      _notify();
+    }
+  }
+
+  void toggleTaskStatus(int id) {
+    final index = _tasks.indexWhere((t) => t.id == id);
+    if (index != -1) {
+      _tasks[index].toggle();
+      _notify();
+    }
+  }
+
+  void deleteTask(int id) {
+    _tasks.removeWhere((t) => t.id == id);
+    _notify();
+  }
+
+  void clearAll() {
+    _tasks.clear();
+    _nextId = 1;
+    _notify();
+  }
+
+  void dispose() {
+    _taskStreamController.close();
+  }
+}
